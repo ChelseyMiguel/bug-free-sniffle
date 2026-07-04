@@ -19,6 +19,6 @@ directly to one active state.
 
 Apply clock signal to clk pin. Set ui[0] HIGH to simulate an obstacle in
 range — chip transitions from FORWARD to TURNING. Set ui[1] HIGH to
-simulate a dangerously close obstacle — chip transitions to STOPPED
+simulate a dangerously close obstacle chip transitions to STOPPED
 regardless of current state. Pull both LOW to return to FORWARD. Monitor
-uo[0], uo[1], uo[2] for current state — only one will be HIGH at a time.
+uo[0], uo[1], uo[2] for current state only one will be HIGH at a time.

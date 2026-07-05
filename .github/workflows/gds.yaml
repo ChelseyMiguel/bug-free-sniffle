@@ -38,11 +38,42 @@ jobs:
       - name: GL test
         uses: TinyTapeout/tt-gds-action/gl_test@ttihp26a
 
-  viewer:
-    needs: gds
-    runs-on: ubuntu-24.04
-    permissions:
-      pages: write # to deploy to Pages
-      id-token: write # to verify the deployment originates from an appropriate source
-    steps:
-      - uses: TinyTapeout/tt-gds-action/viewer@ttihp26a
+ viewer:
+  needs: gds
+  runs-on: ubuntu-24.04
+  permissions:
+    pages: write
+    id-token: write
+    actions: write   # required to delete artifacts via the Actions API
+  steps:
+    - name: Remove duplicate github-pages artifacts
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO: ${{ github.repository }}
+        RUN_ID: ${{ github.run_id }}
+      run: |
+        set -euo pipefail
+        echo "Listing artifacts for run $RUN_ID..."
+        artifacts_json=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+          "https://api.github.com/repos/$REPO/actions/runs/$RUN_ID/artifacts")
+
+        # Select artifacts named "github-pages", sort by created_at, keep newest, delete the rest
+        ids_to_delete=$(echo "$artifacts_json" | jq -r '
+          .artifacts
+          | map(select(.name == "github-pages"))
+          | sort_by(.created_at)
+          | .[0:-1]  # all but the last (newest)
+          | .[].id
+        ')
+
+        if [ -z "$ids_to_delete" ]; then
+          echo "No duplicate github-pages artifacts to delete."
+        else
+          for id in $ids_to_delete; do
+            echo "Deleting artifact id=$id"
+            curl -s -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/$REPO/actions/artifacts/$id"
+          done
+        fi
+
+    - uses: TinyTapeout/tt-gds-action/viewer@ttihp26a
